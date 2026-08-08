@@ -34,6 +34,8 @@ function LessonPage() {
   const { prev, next } = getAdjacent(slug);
   const completed = useProgress((s) => s.completed);
   const markComplete = useProgress((s) => s.markComplete);
+  const markVisited = useProgress((s) => s.markVisited);
+  const mastered = useProgress((s) => s.mastered);
   const bookmarks = useProgress((s) => s.bookmarks);
   const toggleBookmark = useProgress((s) => s.toggleBookmark);
   const notes = useProgress((s) => s.notes);
@@ -45,6 +47,7 @@ function LessonPage() {
 
   useEffect(() => {
     window.scrollTo({ top: 0 });
+    markVisited(slug);
     setNoteLocal(notes[slug] ?? "");
   }, [slug, notes]);
 
