@@ -1,3 +1,64 @@
 # learning-d3
-Interactive Chinese D3.js course: lessons, live demos, quizzes, playground, chart studio.
-Site: https://xiaoqianran.github.io/learning-d3/
+
+> 交互式中文 D3.js 教程：讲解 + 源码 + Live Demo + 测验 + Playground + 图表工坊。
+> API 权威以 [d3js.org](https://d3js.org) 为准（站点暂无官方 llms.txt）。
+
+完整上下文（全文）：[https://xiaoqianran.github.io/learning-d3/llms-full.txt](https://xiaoqianran.github.io/learning-d3/llms-full.txt)
+
+## 官方权威（务必优先）
+
+- [d3js.org](https://d3js.org) — 文档首页
+- [What is D3?](https://d3js.org/what-is-d3)
+- [Getting started](https://d3js.org/getting-started)
+- [API index](https://d3js.org/api)
+- [Gallery (Observable)](https://observablehq.com/@d3/gallery)
+
+## 站点入口
+
+- [首页大纲](https://xiaoqianran.github.io/learning-d3/)
+- [文档地图](https://xiaoqianran.github.io/learning-d3/docs)
+- [Playground](https://xiaoqianran.github.io/learning-d3/playground)
+- [图表工坊](https://xiaoqianran.github.io/learning-d3/studio)
+- [速查表](https://xiaoqianran.github.io/learning-d3/cheatsheet)
+- [学习中心](https://xiaoqianran.github.io/learning-d3/hub)
+- [练习场](https://xiaoqianran.github.io/learning-d3/lab)
+- [结业证明](https://xiaoqianran.github.io/learning-d3/certificate)
+
+## 课程 · 基础
+
+- [D3 是什么](https://xiaoqianran.github.io/learning-d3/lesson/intro): 数据驱动文档：用数据操作 DOM/SVG。（入门 · 8 分钟）
+- [选择与修改](https://xiaoqianran.github.io/learning-d3/lesson/selection): select / selectAll / attr / style / text。（入门 · 10 分钟）
+- [数据绑定 data + join](https://xiaoqianran.github.io/learning-d3/lesson/data-join): 把数组接到 DOM 节点上。（入门 · 12 分钟）
+- [Enter / Update / Exit 详解](https://xiaoqianran.github.io/learning-d3/lesson/enter-update-exit): 理解数据变化时元素生命周期。（入门 · 12 分钟）
+- [比例尺 Scales](https://xiaoqianran.github.io/learning-d3/lesson/scales): 把数据域映射到像素域。（入门 · 14 分钟）
+- [坐标轴 Axes](https://xiaoqianran.github.io/learning-d3/lesson/axes): axisBottom / axisLeft 与 tick。（入门 · 10 分钟）
+- [SVG 与 path 生成器](https://xiaoqianran.github.io/learning-d3/lesson/svg-shapes): line / area / arc / symbol。（入门 · 12 分钟）
+
+## 课程 · 图表
+
+- [柱状图](https://xiaoqianran.github.io/learning-d3/lesson/bar-chart): 从 scale + join 拼出完整柱图。（进阶 · 14 分钟）
+- [折线图](https://xiaoqianran.github.io/learning-d3/lesson/line-chart): 时间序列与单调曲线。（进阶 · 12 分钟）
+- [面积图](https://xiaoqianran.github.io/learning-d3/lesson/area-chart): line + y0/y1 填充区域。（进阶 · 10 分钟）
+- [散点图](https://xiaoqianran.github.io/learning-d3/lesson/scatter): 二维关系与半径编码。（进阶 · 12 分钟）
+- [饼图与环形图](https://xiaoqianran.github.io/learning-d3/lesson/pie): pie 布局 + arc 生成器。（进阶 · 12 分钟）
+- [过渡动画](https://xiaoqianran.github.io/learning-d3/lesson/transitions): transition / duration / ease / delay。（进阶 · 12 分钟）
+- [交互与事件](https://xiaoqianran.github.io/learning-d3/lesson/interactions): on('pointerenter')、tooltip、高亮。（进阶 · 12 分钟）
+
+## 课程 · 布局
+
+- [层级数据 hierarchy](https://xiaoqianran.github.io/learning-d3/lesson/hierarchy): stratify / hierarchy 与 descendants。（进阶 · 12 分钟）
+- [树图 Tree](https://xiaoqianran.github.io/learning-d3/lesson/tree): tree 布局与 linkHorizontal。（进阶 · 12 分钟）
+- [力导向图 Force](https://xiaoqianran.github.io/learning-d3/lesson/force): simulation 与多种力。（进阶 · 14 分钟）
+- [Pack 与 Treemap](https://xiaoqianran.github.io/learning-d3/lesson/pack): 圆形堆叠与矩形树图。（进阶 · 12 分钟）
+
+## 课程 · 交互进阶
+
+- [响应式图表](https://xiaoqianran.github.io/learning-d3/lesson/responsive): viewBox、resize、容器查询思维。（实战 · 12 分钟）
+- [颜色比例尺与图例](https://xiaoqianran.github.io/learning-d3/lesson/color-scale): ordinal / sequential / diverging。（实战 · 10 分钟）
+- [刷选与缩放](https://xiaoqianran.github.io/learning-d3/lesson/brush): brushX / zoom 过滤视图。（实战 · 14 分钟）
+- [迷你仪表盘](https://xiaoqianran.github.io/learning-d3/lesson/dashboard): 多图联动：总览 + 明细。（实战 · 16 分钟）
+
+## 课程 · 工程化
+
+- [模块化图表函数](https://xiaoqianran.github.io/learning-d3/lesson/modules): 可复用 chart(selection, data, opts)。（实战 · 12 分钟）
+- [性能与最佳实践](https://xiaoqianran.github.io/learning-d3/lesson/performance): 大数据、Canvas、避免无效 join。（实战 · 12 分钟）

@@ -1,0 +1,997 @@
+# learning-d3 — full curriculum
+
+生成自本站 24 课。权威 API 语义以 d3js.org 为准。
+
+---
+
+# D3 是什么
+
+- slug: `intro`
+- track: 基础
+- level: 入门
+- minutes: 8
+
+### 数据驱动文档
+
+D3（Data-Driven Documents）不是图表库，而是一套把数据绑定到页面元素并驱动视觉变化的工具。你可以用它画柱状图，也可以做地图、力导向网络、自定义可视化。
+
+核心心智模型：数据 → 选择集 → 绑定 → 属性/样式/过渡。
+
+
+### 最小例子 · 用数据画矩形
+
+```js
+import * as d3 from "d3";
+
+const data = [12, 28, 18, 32, 24];
+d3.select("#chart")
+  .selectAll("div.bar")
+  .data(data)
+  .join("div")
+  .attr("class", "bar")
+  .style("width", (d) => d * 8 + "px")
+  .text((d) => d);
+```
+
+
+**交互 Demo：** 动手：数据驱动的条形（kind: `intro-bars`）
+
+
+> **提示：** D3 常与 SVG 搭配；也支持 Canvas / HTML。本站示例以 SVG 为主，便于调试与交互。
+
+
+**测验：**
+- Q: D3 的核心思想？
+  - [ ] 只提供现成图表组件
+  - [✓] 数据驱动 DOM/SVG
+  - [ ] 只能画地图
+  - [ ] 替代 React
+  - 解析: Data-Driven Documents：用数据驱动页面。
+- Q: D3 更像？
+  - [ ] Chart.js 封装
+  - [✓] 低层可视化工具箱
+  - [ ] 数据库
+  - [ ] CSS 框架
+  - 解析: 底层原语多，自由度高。
+
+
+---
+
+# 选择与修改
+
+- slug: `selection`
+- track: 基础
+- level: 入门
+- minutes: 10
+
+### 选择集
+
+d3.select 取第一个匹配元素；d3.selectAll 取全部。之后链式调用 attr、style、property、text、html、classed、on。
+
+选择集像 jQuery 风格 API，但真正强大在「数据绑定」之后。
+
+
+### 对应源码 · 选择与链式修改
+
+```js
+const svg = d3.select("#chart").append("svg")
+  .attr("width", 320).attr("height", 120);
+
+svg.selectAll("circle")
+  .data([20, 40, 60, 80])
+  .join("circle")
+  .attr("cx", (d, i) => 40 + i * 70)
+  .attr("cy", 60)
+  .attr("r", (d) => d / 4)
+  .attr("fill", "var(--color-primary)");
+```
+
+
+**交互 Demo：** 动手：选择与属性（kind: `selection`）
+
+
+**测验：**
+- Q: selectAll 返回？
+  - [ ] 单个节点
+  - [✓] 选择集（可能多个）
+  - [ ] 数组原始数据
+  - [ ] Promise
+  - 解析: 选择集，可继续链式操作。
+- Q: attr 与 style 区别？
+  - [ ] 完全一样
+  - [✓] attr 写属性，style 写 CSS
+  - [ ] attr 只用于 class
+  - [ ] style 不能动画
+  - 解析: SVG 几何多用 attr；颜色等也可用 style。
+
+
+---
+
+# 数据绑定 data + join
+
+- slug: `data-join`
+- track: 基础
+- level: 入门
+- minutes: 12
+
+### Join 模式
+
+现代 D3 推荐 selection.data(data).join(enter)。join 会自动处理 enter（新建）、update（更新）、exit（移除）。
+
+key 函数很重要：用稳定业务 id，不要只用数组下标，否则过渡会错乱。
+
+
+### 对应源码 · join
+
+```js
+const data = [
+  { id: "a", v: 10 },
+  { id: "b", v: 20 },
+  { id: "c", v: 15 },
+];
+
+svg.selectAll("rect")
+  .data(data, (d) => d.id)
+  .join("rect")
+  .attr("x", (_, i) => i * 40)
+  .attr("y", (d) => 100 - d.v * 3)
+  .attr("width", 30)
+  .attr("height", (d) => d.v * 3);
+```
+
+
+**交互 Demo：** 动手：增减数据看 join（kind: `data-join`）
+
+
+> **提示：** 旧写法 enter/append + merge + exit/remove 仍常见于老代码；新项目优先 .join()。
+
+
+**测验：**
+- Q: join 主要处理？
+  - [ ] 仅 CSS
+  - [✓] enter / update / exit
+  - [ ] 仅异步
+  - [ ] 仅坐标轴
+  - 解析: 数据与元素的增删改。
+- Q: key 函数建议？
+  - [ ] 永远用 index
+  - [✓] 用稳定 id
+  - [ ] 随机数
+  - [ ] 固定 0
+  - 解析: 稳定 key 保证正确匹配。
+
+
+---
+
+# Enter / Update / Exit 详解
+
+- slug: `enter-update-exit`
+- track: 基础
+- level: 入门
+- minutes: 12
+
+### 三态
+
+Enter：数据有、元素无 → 创建。Update：两边都有 → 改属性。Exit：元素有、数据无 → 删除（常配合过渡）。
+
+join(enter => …, update => …, exit => …) 可分别定制三态动画。
+
+
+### 对应源码 · 自定义三态
+
+```js
+sel.data(data, (d) => d)
+  .join(
+    (enter) => enter.append("circle")
+      .attr("r", 0)
+      .call((e) => e.transition().attr("r", 12)),
+    (update) => update.attr("fill", "var(--color-accent)"),
+    (exit) => exit.transition().attr("r", 0).remove(),
+  );
+```
+
+
+**交互 Demo：** 动手：三态动画（kind: `enter-update-exit`）
+
+
+**测验：**
+- Q: 数据变少时主要触发？
+  - [ ] enter
+  - [✓] exit
+  - [ ] scale
+  - [ ] axis
+  - 解析: 多余元素进入 exit。
+
+
+---
+
+# 比例尺 Scales
+
+- slug: `scales`
+- track: 基础
+- level: 入门
+- minutes: 14
+
+### domain 与 range
+
+scaleLinear：连续数值。scaleBand：分类柱状图。scaleTime：时间。scaleOrdinal / scaleSequential：颜色。
+
+几乎所有图表都先定 scale，再画几何。
+
+
+### 对应源码 · linear + band
+
+```js
+const x = d3.scaleBand()
+  .domain(data.map((d) => d.name))
+  .range([0, width])
+  .padding(0.2);
+
+const y = d3.scaleLinear()
+  .domain([0, d3.max(data, (d) => d.value)]).nice()
+  .range([height, 0]); // SVG y 向下
+```
+
+
+**交互 Demo：** 动手：拖动看 domain/range（kind: `scales`）
+
+
+> **提示：** SVG 的 y 轴向下增大，所以数值轴 range 常写成 [height, 0]。
+
+
+**测验：**
+- Q: 柱状图分类轴常用？
+  - [ ] scaleLinear
+  - [✓] scaleBand
+  - [ ] scaleSqrt
+  - [ ] scaleLog
+  - 解析: band 给每类一段带宽。
+- Q: y 轴 range 为何常 [h,0]？
+  - [ ] 更快
+  - [✓] SVG 坐标系 y 向下
+  - [ ] D3 强制
+  - [ ] 随机
+  - 解析: 屏幕坐标原点在左上。
+
+
+---
+
+# 坐标轴 Axes
+
+- slug: `axes`
+- track: 基础
+- level: 入门
+- minutes: 10
+
+### 生成轴
+
+轴是根据 scale 生成的一组 path + text。axisBottom(x) 画在底部；需要 g 容器并 transform 到正确位置。
+
+ticks、tickFormat、tickSize 控制刻度观感。
+
+
+### 对应源码 · 双轴
+
+```js
+g.append("g")
+  .attr("transform", `translate(0,${height})`)
+  .call(d3.axisBottom(x));
+
+g.append("g")
+  .call(d3.axisLeft(y).ticks(5).tickFormat((d) => d + "k"));
+```
+
+
+**交互 Demo：** 动手：坐标轴与刻度（kind: `axes`）
+
+
+**测验：**
+- Q: axis 依赖什么？
+  - [ ] CSS only
+  - [✓] scale
+  - [ ] Canvas 2D
+  - [ ] WebGL
+  - 解析: 轴从 scale 推导刻度位置。
+
+
+---
+
+# SVG 与 path 生成器
+
+- slug: `svg-shapes`
+- track: 基础
+- level: 入门
+- minutes: 12
+
+### 形状生成器
+
+d3.line、d3.area、d3.arc、d3.symbol 把数据转成 path 的 d 字符串。再配合 curve 曲线插值（curveMonotoneX、curveBasis…）。
+
+
+### 对应源码 · line
+
+```js
+const line = d3.line()
+  .x((d) => x(d.t))
+  .y((d) => y(d.v))
+  .curve(d3.curveMonotoneX);
+
+path.datum(data).attr("d", line).attr("fill", "none");
+```
+
+
+**交互 Demo：** 动手：曲线类型（kind: `svg-shapes`）
+
+
+**测验：**
+- Q: line 生成器输出？
+  - [ ] PNG
+  - [✓] path d 字符串
+  - [ ] CSV
+  - [ ] WebGL buffer
+  - 解析: SVG path 的 d。
+
+
+---
+
+# 柱状图
+
+- slug: `bar-chart`
+- track: 图表
+- level: 进阶
+- minutes: 14
+
+### 标准配方
+
+margin → 内宽高 → scaleBand + scaleLinear → join rect → axes → 标签。这是 D3 入门后的第一个「完整图表」。
+
+
+### 对应源码 · 柱状图
+
+```js
+const margin = { top: 16, right: 16, bottom: 32, left: 40 };
+const w = width - margin.left - margin.right;
+const h = height - margin.top - margin.bottom;
+const g = svg.append("g").attr("transform", `translate(${margin.left},${margin.top})`);
+
+g.selectAll("rect")
+  .data(data)
+  .join("rect")
+  .attr("x", (d) => x(d.name))
+  .attr("y", (d) => y(d.value))
+  .attr("width", x.bandwidth())
+  .attr("height", (d) => h - y(d.value));
+```
+
+
+**交互 Demo：** 动手：完整柱状图（kind: `bar-chart`）
+
+
+**测验：**
+- Q: 柱宽通常来自？
+  - [✓] x.bandwidth()
+  - [ ] Math.random
+  - [ ] 固定 10
+  - [ ] y(d)
+  - 解析: scaleBand 提供 bandwidth。
+
+
+---
+
+# 折线图
+
+- slug: `line-chart`
+- track: 图表
+- level: 进阶
+- minutes: 12
+
+### 折线
+
+x 常为 scaleTime 或 scalePoint；y 为 scaleLinear。line.curve 控制平滑。多系列时每条线一个 path。
+
+
+### 对应源码 · 折线
+
+```js
+const x = d3.scalePoint().domain(data.map(d => d.m)).range([0, w]);
+const y = d3.scaleLinear().domain([0, d3.max(data, d => d.v)]).nice().range([h, 0]);
+const line = d3.line().x(d => x(d.m)).y(d => y(d.v)).curve(d3.curveMonotoneX);
+g.append("path").datum(data).attr("d", line).attr("fill", "none").attr("stroke-width", 2);
+```
+
+
+**交互 Demo：** 动手：折线图（kind: `line-chart`）
+
+
+**测验：**
+- Q: 单条折线绑定数据常用？
+  - [ ] selectAll + data
+  - [✓] path.datum(data)
+  - [ ] only append
+  - [ ] innerHTML
+  - 解析: 整条 path 对应整个数组用 datum。
+
+
+---
+
+# 面积图
+
+- slug: `area-chart`
+- track: 图表
+- level: 进阶
+- minutes: 10
+
+### area
+
+d3.area 类似 line，但有 y0/y1（或 x0/x1）定义填充边界。常用于趋势强调与 stacked area。
+
+
+### 对应源码 · 面积
+
+```js
+const area = d3.area()
+  .x((d) => x(d.m))
+  .y0(h)
+  .y1((d) => y(d.v))
+  .curve(d3.curveMonotoneX);
+```
+
+
+**交互 Demo：** 动手：面积图（kind: `area-chart`）
+
+
+**测验：**
+- Q: 面积图底部常设？
+  - [✓] y0 = h
+  - [ ] y0 = 0 且 range 颠倒无所谓
+  - [ ] 必须 Canvas
+  - [ ] 只能 pie
+  - 解析: y0 通常是基线高度。
+
+
+---
+
+# 散点图
+
+- slug: `scatter`
+- track: 图表
+- level: 进阶
+- minutes: 12
+
+### 散点
+
+每个点一个 circle：cx/cy 映射两个度量，可选 r 或 fill 映射第三维。注意重叠与透明度。
+
+
+### 对应源码 · 散点
+
+```js
+g.selectAll("circle")
+  .data(data)
+  .join("circle")
+  .attr("cx", (d) => x(d.a))
+  .attr("cy", (d) => y(d.b))
+  .attr("r", (d) => r(d.c))
+  .attr("fill-opacity", 0.75);
+```
+
+
+**交互 Demo：** 动手：散点图（kind: `scatter`）
+
+
+**测验：**
+- Q: 散点第三维常见编码？
+  - [ ] 只能文字
+  - [✓] 半径 / 颜色
+  - [ ] 必须 3D
+  - [ ] 删除轴
+  - 解析: r 或 color 映射额外字段。
+
+
+---
+
+# 饼图与环形图
+
+- slug: `pie`
+- track: 图表
+- level: 进阶
+- minutes: 12
+
+### pie + arc
+
+d3.pie() 把数值数组变成带 startAngle/endAngle 的布局数据；d3.arc() 生成扇形 path。innerRadius > 0 即 donut。
+
+
+### 对应源码 · 环形图
+
+```js
+const pie = d3.pie().value((d) => d.v).sort(null);
+const arc = d3.arc().innerRadius(50).outerRadius(90);
+g.selectAll("path")
+  .data(pie(data))
+  .join("path")
+  .attr("d", arc)
+  .attr("fill", (d, i) => color(i));
+```
+
+
+**交互 Demo：** 动手：饼/环图（kind: `pie`）
+
+
+**测验：**
+- Q: 环形图关键？
+  - [✓] innerRadius > 0
+  - [ ] 必须 scaleBand
+  - [ ] 禁用 pie
+  - [ ] 只用 rect
+  - 解析: 内半径大于 0。
+
+
+---
+
+# 过渡动画
+
+- slug: `transitions`
+- track: 图表
+- level: 进阶
+- minutes: 12
+
+### 过渡
+
+selection.transition() 创建过渡；duration、ease、delay 控制节奏。可链式 attrTween。数据更新时先 join 再 transition，观感专业很多。
+
+
+### 对应源码 · 过渡
+
+```js
+bars.transition()
+  .duration(600)
+  .ease(d3.easeCubicOut)
+  .attr("y", (d) => y(d))
+  .attr("height", (d) => h - y(d));
+```
+
+
+**交互 Demo：** 动手：切换数据动画（kind: `transitions`）
+
+
+**测验：**
+- Q: transition 作用？
+  - [ ] 改数据库
+  - [✓] 在时间上插值属性
+  - [ ] 编译 TS
+  - [ ] 打包代码
+  - 解析: 平滑插值视觉属性。
+
+
+---
+
+# 交互与事件
+
+- slug: `interactions`
+- track: 图表
+- level: 进阶
+- minutes: 12
+
+### 指针事件
+
+用 selection.on 绑定 pointerenter/move/leave 或 click。tooltip 可用 HTML 浮层或 SVG title。注意移动端 pointer 事件更通用。
+
+
+### 对应源码 · 悬停
+
+```js
+bars.on("pointerenter", function (event, d) {
+  d3.select(this).attr("opacity", 1);
+  tip.style("display", "block").text(d.name + ": " + d.value);
+}).on("pointerleave", function () {
+  d3.select(this).attr("opacity", 0.75);
+  tip.style("display", "none");
+});
+```
+
+
+**交互 Demo：** 动手：悬停高亮（kind: `interactions`）
+
+
+**测验：**
+- Q: 事件回调第二参数通常是？
+  - [ ] CSS 类名
+  - [✓] 绑定的数据 d
+  - [ ] 窗口宽度
+  - [ ] 颜色
+  - 解析: datum 作为第二参。
+
+
+---
+
+# 层级数据 hierarchy
+
+- slug: `hierarchy`
+- track: 布局
+- level: 进阶
+- minutes: 12
+
+### 层级
+
+树、包图、矩形树图都先把 JSON 变成 hierarchy 节点，再喂给 tree/cluster/pack/treemap 布局。
+
+
+### 对应源码 · hierarchy
+
+```js
+const root = d3.hierarchy(data)
+  .sum((d) => d.value ?? 0)
+  .sort((a, b) => (b.value ?? 0) - (a.value ?? 0));
+console.log(root.leaves());
+```
+
+
+**交互 Demo：** 动手：层级汇总（kind: `hierarchy`）
+
+
+**测验：**
+- Q: sum 的作用？
+  - [ ] 排序颜色
+  - [✓] 自底向上汇总 value
+  - [ ] 画坐标轴
+  - [ ] 做 force
+  - 解析: 叶子值向上汇总。
+
+
+---
+
+# 树图 Tree
+
+- slug: `tree`
+- track: 布局
+- level: 进阶
+- minutes: 12
+
+### 树布局
+
+d3.tree().size([h, w]) 给每个节点 x/y。连线用 d3.linkHorizontal() 或 linkVertical。
+
+
+### 对应源码 · tree
+
+```js
+const treeLayout = d3.tree().size([h, w - 80]);
+const root = treeLayout(d3.hierarchy(data));
+g.selectAll("path")
+  .data(root.links())
+  .join("path")
+  .attr("d", d3.linkHorizontal().x((d) => d.y).y((d) => d.x));
+```
+
+
+**交互 Demo：** 动手：树图（kind: `tree`）
+
+
+**测验：**
+- Q: 树节点位置由谁计算？
+  - [ ] CSS flex
+  - [✓] tree 布局
+  - [ ] pie
+  - [ ] axis
+  - 解析: hierarchy tree layout。
+
+
+---
+
+# 力导向图 Force
+
+- slug: `force`
+- track: 布局
+- level: 进阶
+- minutes: 14
+
+### 力模拟
+
+d3.forceSimulation(nodes) 迭代更新 x/y。常用 forceLink、forceManyBody、forceCenter、forceCollide。tick 回调里重绘。
+
+
+### 对应源码 · force
+
+```js
+const sim = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id((d) => d.id).distance(60))
+  .force("charge", d3.forceManyBody().strength(-180))
+  .force("center", d3.forceCenter(w / 2, h / 2));
+
+sim.on("tick", () => {
+  link.attr("x1", (d) => d.source.x).attr("y1", (d) => d.source.y)
+      .attr("x2", (d) => d.target.x).attr("y2", (d) => d.target.y);
+  node.attr("cx", (d) => d.x).attr("cy", (d) => d.y);
+});
+```
+
+
+**交互 Demo：** 动手：力导向网络（kind: `force`）
+
+
+**测验：**
+- Q: force 位置更新时机？
+  - [ ] 仅 CSS
+  - [✓] simulation tick
+  - [ ] 仅 resize
+  - [ ] 仅 scroll
+  - 解析: 每帧 tick 更新坐标。
+
+
+---
+
+# Pack 与 Treemap
+
+- slug: `pack`
+- track: 布局
+- level: 进阶
+- minutes: 12
+
+### 空间填充布局
+
+pack 用圆表示层级；treemap 用矩形。都适合展示占比与层级，如磁盘占用、预算结构。
+
+
+### 对应源码 · pack
+
+```js
+const pack = d3.pack().size([w, h]).padding(3);
+const root = pack(d3.hierarchy(data).sum((d) => d.value));
+g.selectAll("circle")
+  .data(root.descendants())
+  .join("circle")
+  .attr("cx", (d) => d.x)
+  .attr("cy", (d) => d.y)
+  .attr("r", (d) => d.r);
+```
+
+
+**交互 Demo：** 动手：圆堆叠（kind: `pack`）
+
+
+**测验：**
+- Q: treemap 用什么形状？
+  - [ ] 圆
+  - [✓] 矩形
+  - [ ] 折线
+  - [ ] 弧
+  - 解析: 矩形填充。
+
+
+---
+
+# 响应式图表
+
+- slug: `responsive`
+- track: 交互进阶
+- level: 实战
+- minutes: 12
+
+### 自适应
+
+用 viewBox 让 SVG 缩放，或监听 ResizeObserver 重算 width 后重绘。移动端减少刻度、简化标签。
+
+
+### 对应源码 · viewBox
+
+```js
+svg.attr("viewBox", `0 0 ${width} ${height}`)
+  .attr("preserveAspectRatio", "xMidYMid meet")
+  .style("width", "100%")
+  .style("height", "auto");
+```
+
+
+**交互 Demo：** 动手：宽度变化重绘（kind: `responsive`）
+
+
+**测验：**
+- Q: 响应式常用？
+  - [ ] 写死 1920px
+  - [✓] viewBox 或 ResizeObserver
+  - [ ] 禁用轴
+  - [ ] 只用 png
+  - 解析: 自适应容器宽度。
+
+
+---
+
+# 颜色比例尺与图例
+
+- slug: `color-scale`
+- track: 交互进阶
+- level: 实战
+- minutes: 10
+
+### 配色
+
+分类：scaleOrdinal + schemeCategory。连续：scaleSequential + interpolateBlues。发散：scaleDiverging。记得做色盲友好与图例。
+
+
+### 对应源码 · sequential
+
+```js
+const color = d3.scaleSequential(d3.interpolateTurbo)
+  .domain(d3.extent(data, (d) => d.v));
+rect.attr("fill", (d) => color(d.v));
+```
+
+
+**交互 Demo：** 动手：颜色映射（kind: `color-scale`）
+
+
+**测验：**
+- Q: 连续数值填色常用？
+  - [ ] scaleBand
+  - [✓] scaleSequential
+  - [ ] forceLink
+  - [ ] pie
+  - 解析: sequential + interpolate。
+
+
+---
+
+# 刷选与缩放
+
+- slug: `brush`
+- track: 交互进阶
+- level: 实战
+- minutes: 14
+
+### 探索式交互
+
+brush 用于框选时间范围或过滤散点；zoom 用于平移缩放。二者常与 scale 重新计算联用。
+
+
+### 对应源码 · brushX
+
+```js
+const brush = d3.brushX().extent([[0, 0], [w, h]])
+  .on("end", (event) => {
+    if (!event.selection) return;
+    const [x0, x1] = event.selection.map(x.invert);
+    // filter data between x0 and x1
+  });
+g.append("g").call(brush);
+```
+
+
+**交互 Demo：** 动手：刷选高亮（kind: `brush`）
+
+
+**测验：**
+- Q: brush 的 selection 是？
+  - [ ] CSS 选择器
+  - [✓] 像素范围坐标
+  - [ ] SQL
+  - [ ] 路由
+  - 解析: 屏幕坐标选区，再 invert 回数据域。
+
+
+---
+
+# 迷你仪表盘
+
+- slug: `dashboard`
+- track: 交互进阶
+- level: 实战
+- minutes: 16
+
+### 组合
+
+真实项目往往是多个小图共享同一数据过滤状态。点击柱状过滤 → 折线/散点重绘。状态可放 React/Zustand，渲染仍用 D3。
+
+
+### 对应源码 · 过滤后重绘
+
+```js
+function render(filterCat) {
+  const rows = filterCat
+    ? data.filter((d) => d.cat === filterCat)
+    : data;
+  updateBars(rows);
+  updateLine(rows);
+}
+```
+
+
+**交互 Demo：** 动手：联动仪表盘（kind: `dashboard`）
+
+
+**测验：**
+- Q: 多图联动关键？
+  - [✓] 共享过滤状态
+  - [ ] 每图独立假数据永不更新
+  - [ ] 禁用事件
+  - [ ] 只截图
+  - 解析: 同一状态驱动多视图。
+
+
+---
+
+# 模块化图表函数
+
+- slug: `modules`
+- track: 工程化
+- level: 实战
+- minutes: 12
+
+### 封装
+
+把「清空 → 量尺寸 → scale → join → axes」封成函数，便于在 React useEffect 中调用，也便于单测。
+
+
+### 对应源码 · 图表函数
+
+```js
+export function barChart(el, data, { width = 400, height = 240 } = {}) {
+  const root = d3.select(el);
+  root.selectAll("*").remove();
+  // ... build svg
+  return { update(next) { /* re-join */ } };
+}
+```
+
+
+**交互 Demo：** 动手：可复用柱图组件（kind: `modules`）
+
+
+**测验：**
+- Q: React 里用 D3 常见做法？
+  - [✓] 在 useEffect 里操作 ref DOM
+  - [ ] 在 render 里直接 d3.select(document)
+  - [ ] 禁止 SVG
+  - [ ] 只用 jQuery
+  - 解析: ref + effect 管理生命周期。
+
+
+---
+
+# 性能与最佳实践
+
+- slug: `performance`
+- track: 工程化
+- level: 实战
+- minutes: 12
+
+### 性能要点
+
+万级点优先 Canvas/WebGL；SVG 适合千级内交互精细场景。避免每帧全量 selectAll 重建；用 key 稳定 join；过渡别叠太多。
+
+可访问性：标题、aria、对比度、键盘可达。
+
+
+### 对应源码 · 减少重绘
+
+```js
+// 好：更新已有选择集
+bars.data(data, (d) => d.id)
+  .join("rect")
+  .attr("height", (d) => y(d.v));
+
+// 差：每次 remove 全部再 append
+svg.selectAll("*").remove();
+```
+
+
+**交互 Demo：** 动手：高效更新 vs 全量重建（kind: `performance`）
+
+
+> **提示：** 学完本路径后，去「图表工坊」完成闯关，并在 Playground 自由实验。
+
+
+**测验：**
+- Q: 超大散点更合适？
+  - [ ] 纯 SVG 十万 circle
+  - [✓] Canvas / WebGL
+  - [ ] 只用 pie
+  - [ ] 禁用 scale
+  - 解析: 大量图元 Canvas/WebGL 更合适。
+- Q: 应避免？
+  - [ ] 稳定 key
+  - [✓] 每帧无脑全量 remove
+  - [ ] requestAnimationFrame
+  - [ ] 抽公共函数
+  - 解析: 全量销毁重建昂贵。
+

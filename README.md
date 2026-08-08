@@ -1,3 +1,12 @@
+# learning-d3
+
+交互式中文 **D3.js** 教程（TanStack Start + Vite）。
+
+- 对齐 [d3js.org](https://d3js.org) API 文档（官方暂无 llms.txt）
+- 本站发布：[`/llms.txt`](https://xiaoqianran.github.io/learning-d3/llms.txt) · [`/llms-full.txt`](https://xiaoqianran.github.io/learning-d3/llms-full.txt)
+- UI：Catppuccin + 学/查/练/我 导航（与 learning-vue3 同构）
+- 部署：GitHub Actions → GitHub Pages
+
 # D3.js 实战学习
 
 交互式中文 D3 教程：课程 + Live Demo + 测验 + 进度 + Playground + 图表工坊。
