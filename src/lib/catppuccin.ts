@@ -24,8 +24,8 @@ export type CtpAccent = (typeof CTP_ACCENTS)[number]["id"];
 export const CTP_STORAGE_KEY = "d3-learn-ctp-flavor";
 export const CTP_ACCENT_KEY = "d3-learn-ctp-accent";
 export const DEFAULT_CTP_FLAVOR: CtpFlavor = "mocha";
-/** 默认 Green，贴合 D3 数据可视化 */
-export const DEFAULT_CTP_ACCENT: CtpAccent = "blue";
+/** 默认 Green，贴合数据可视化青绿（D3 气质） */
+export const DEFAULT_CTP_ACCENT: CtpAccent = "teal";
 
 export function isCtpFlavor(v: string | null | undefined): v is CtpFlavor {
   return CTP_FLAVORS.some((f) => f.id === v);

@@ -1,6 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { LESSONS, getLessonsByTrack } from "@/data/lessons";
-import { getContinueLesson, orderedTracks, trackLabel } from "@/lib/nav";
+import {
+  completedCount,
+  getContinueLesson,
+  orderedTracks,
+  progressPercent,
+  trackLabel,
+} from "@/lib/nav";
 import { useProgress, todayKey } from "@/store/progress";
 import { Button } from "@/components/ui/button";
 import { Award, BookMarked, BookX, Flame, StickyNote, Target } from "lucide-react";
@@ -11,6 +17,7 @@ export const Route = createFileRoute("/hub")({
 
 function HubPage() {
   const completed = useProgress((s) => s.completed);
+  const mastered = useProgress((s) => s.mastered);
   const quizScores = useProgress((s) => s.quizScores);
   const bookmarks = useProgress((s) => s.bookmarks);
   const notes = useProgress((s) => s.notes);
@@ -18,44 +25,52 @@ function HubPage() {
   const streak = useProgress((s) => s.streak);
   const checkIns = useProgress((s) => s.checkIns);
   const checkInToday = useProgress((s) => s.checkInToday);
+  const reset = useProgress((s) => s.reset);
 
   const noteEntries = Object.entries(notes).filter(([, v]) => v.trim());
   const avgScore =
     Object.keys(quizScores).length === 0
       ? null
       : Math.round(
-          Object.values(quizScores).reduce((a, b) => a + b, 0) / Object.keys(quizScores).length,
+          Object.values(quizScores).reduce((a, b) => a + b, 0) /
+            Object.keys(quizScores).length,
         );
   const checkedIn = checkIns.includes(todayKey());
-
   const cont = getContinueLesson(completed);
-  const progress = Math.round((completed.length / LESSONS.length) * 100);
+  const progress = progressPercent(completed);
+  const doneCount = completedCount(completed);
 
   return (
     <div className="mx-auto max-w-3xl pb-16">
       <header className="mb-6">
-        <p className="text-xs font-medium uppercase tracking-wider text-primary">v1 · 我的进度</p>
+        <p className="text-xs font-medium uppercase tracking-wider text-primary">
+          v2 · 我的进度
+        </p>
         <h1 className="mt-1 font-display text-2xl font-semibold text-fg">学习中心</h1>
-        <p className="mt-1 text-sm text-muted">这里是进度权威视图：路径、打卡、收藏、笔记与错题</p>
+        <p className="mt-1 text-sm text-muted">
+          进度权威视图：路径、打卡、收藏、笔记与错题 · 测验 ≥80% 为掌握
+        </p>
       </header>
 
       <div className="mb-6 flex flex-col gap-3 rounded-xl border border-primary/30 bg-primary-soft p-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <p className="text-[10px] font-medium uppercase tracking-wider text-primary">下一步</p>
+          <p className="text-[10px] font-medium uppercase tracking-wider text-primary">
+            下一步
+          </p>
           <p className="mt-0.5 font-display text-base font-semibold text-fg">{cont.title}</p>
           <p className="text-xs text-muted">
             {trackLabel(cont.track)} · 总进度 {progress}%
           </p>
         </div>
         <Link to="/lesson/$slug" params={{ slug: cont.slug }} className="no-underline">
-          <Button>{completed.length > 0 ? "继续学习" : "开始学习"}</Button>
+          <Button>{doneCount > 0 ? "继续学习" : "开始学习"}</Button>
         </Link>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat icon={Target} label="完成课程" value={`${completed.length}/${LESSONS.length}`} />
+        <Stat icon={Target} label="完成课程" value={`${doneCount}/${LESSONS.length}`} />
+        <Stat icon={Award} label="掌握 ≥80%" value={`${mastered.length}/${LESSONS.length}`} />
         <Stat icon={Flame} label="连续打卡" value={`${streak} 天`} />
-        <Stat icon={BookMarked} label="收藏" value={String(bookmarks.length)} />
         <Stat icon={BookX} label="错题" value={String(wrongBook.length)} />
       </div>
 
@@ -117,12 +132,30 @@ function HubPage() {
         >
           <Award className="h-5 w-5 text-primary" />
           <h3 className="mt-2 font-medium text-fg">结业证明</h3>
-          <p className="mt-1 text-sm text-muted">完成全部 {LESSONS.length} 课后解锁</p>
+          <p className="mt-1 text-sm text-muted">掌握全部 {LESSONS.length} 课后解锁</p>
         </Link>
       </section>
 
+      <section className="mt-8 rounded-xl border border-border bg-surface p-4">
+        <h2 className="font-display text-sm font-semibold text-fg">数据</h2>
+        <p className="mt-1 text-xs text-muted">进度保存在本机浏览器，换设备不会同步。</p>
+        {doneCount > 0 ? (
+          <button
+            type="button"
+            className="mt-3 text-xs text-subtle underline-offset-2 hover:text-danger hover:underline"
+            onClick={() => {
+              if (window.confirm("确定重置全部学习进度？此操作不可撤销。")) reset();
+            }}
+          >
+            重置学习进度
+          </button>
+        ) : (
+          <p className="mt-3 text-xs text-subtle">尚无进度可重置</p>
+        )}
+      </section>
+
       <section className="mt-8">
-        <h2 className="font-display text-base font-semibold flex items-center gap-2">
+        <h2 className="flex items-center gap-2 font-display text-base font-semibold">
           <StickyNote className="h-4 w-4 text-primary" />
           我的笔记
         </h2>
@@ -174,7 +207,15 @@ function HubPage() {
   );
 }
 
-function Stat({ icon: Icon, label, value }: { icon: typeof Target; label: string; value: string }) {
+function Stat({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof Target;
+  label: string;
+  value: string;
+}) {
   return (
     <div className="rounded-xl border border-border bg-surface p-4">
       <Icon className="h-4 w-4 text-primary" />

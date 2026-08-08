@@ -18,7 +18,15 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useMemo, useState } from "react";
-import { getContinueLesson, orderedTracks, TRACK_META, trackLabel } from "@/lib/nav";
+import {
+  completedCount,
+  getContinueLesson,
+  isAllComplete,
+  orderedTracks,
+  progressPercent,
+  TRACK_META,
+  trackLabel,
+} from "@/lib/nav";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -33,9 +41,11 @@ function HomePage() {
   const [q, setQ] = useState("");
   const [track, setTrack] = useState<TrackFilter>("全部");
 
-  const progress = Math.round((completed.length / LESSONS.length) * 100);
+  const progress = progressPercent(completed);
+  const doneCount = completedCount(completed);
   const cont = getContinueLesson(completed);
   const contIdx = LESSONS.findIndex((l) => l.slug === cont.slug);
+  const allDone = isAllComplete(completed);
 
   const filtered = useMemo(() => {
     let list = track === "全部" ? LESSONS : getLessonsByTrack(track);
@@ -78,7 +88,7 @@ function HomePage() {
           <div className="flex flex-wrap items-center gap-2">
             <p className="inline-flex items-center gap-1.5 rounded-full border border-border bg-bg/60 px-2.5 py-1 text-xs font-medium text-primary">
               <Sparkles className="h-3.5 w-3.5" />
-              v1 · 系统路径
+              v2 · 系统路径
             </p>
             {streak > 0 ? (
               <span className="rounded-full bg-surface-3 px-2.5 py-1 font-mono text-xs text-muted">
@@ -90,20 +100,29 @@ function HomePage() {
             带你系统学 D3.js
           </h1>
           <p className="mt-3 max-w-xl text-base leading-relaxed text-muted">
-            讲解 → 对应源码 → 动手 Demo → 测验。对照官网{" "}
-            <Link to="/docs" className="text-primary no-underline hover:underline">
+            讲解 → 对应源码 → Demo → 测验（≥80% 掌握）。对照 d3js.org 官方 API 文档{" "}
+            <Link to={"/docs" as any} className="text-primary no-underline hover:underline">
               文档地图
             </Link>
-            ，需要时再查速查表与图表工坊。
+            ，需要时再查速查表与工坊。
           </p>
 
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <Link to="/lesson/$slug" params={{ slug: cont.slug }} className="no-underline">
-              <Button size="lg" className="w-full sm:w-auto">
-                {completed.length > 0 ? "继续学习" : "从第一节开始"}
-                <ArrowRight className="h-4 w-4" />
-              </Button>
-            </Link>
+            {allDone ? (
+              <Link to="/certificate" className="no-underline">
+                <Button size="lg" className="w-full sm:w-auto">
+                  领取结业证明
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            ) : (
+              <Link to="/lesson/$slug" params={{ slug: cont.slug }} className="no-underline">
+                <Button size="lg" className="w-full sm:w-auto">
+                  {doneCount > 0 ? "继续学习" : "从第一节开始"}
+                  <ArrowRight className="h-4 w-4" />
+                </Button>
+              </Link>
+            )}
             <Link to="/hub" className="no-underline">
               <Button size="lg" variant="secondary" className="w-full sm:w-auto">
                 <LayoutDashboard className="h-4 w-4" />
@@ -112,19 +131,24 @@ function HomePage() {
             </Link>
           </div>
 
-          {/* 下一课卡片 */}
           <div className="mt-6 rounded-xl border border-border bg-bg/50 p-4">
             <p className="text-[10px] font-medium uppercase tracking-wider text-subtle">
-              下一课 · {trackLabel(cont.track)}
+              {allDone ? "全部完成" : `下一课 · ${trackLabel(cont.track)}`}
             </p>
             <div className="mt-1 flex flex-wrap items-start justify-between gap-2">
               <div className="min-w-0">
-                <p className="font-display text-lg font-semibold text-fg">{cont.title}</p>
-                <p className="mt-0.5 text-sm text-muted line-clamp-2">{cont.summary}</p>
+                <p className="font-display text-lg font-semibold text-fg">
+                  {allDone ? "可以生成结业证明" : cont.title}
+                </p>
+                <p className="mt-0.5 line-clamp-2 text-sm text-muted">
+                  {allDone ? "想复习可从下方路径点回任意一课。" : cont.summary}
+                </p>
               </div>
-              <span className="shrink-0 font-mono text-xs text-subtle">
-                #{String(contIdx + 1).padStart(2, "0")} · {cont.minutes} 分
-              </span>
+              {!allDone ? (
+                <span className="shrink-0 font-mono text-xs text-subtle">
+                  #{String(contIdx + 1).padStart(2, "0")} · {cont.minutes} 分
+                </span>
+              ) : null}
             </div>
           </div>
 
@@ -136,7 +160,7 @@ function HomePage() {
               />
             </div>
             <span className="font-mono text-xs tabular-nums text-muted">
-              {completed.length}/{LESSONS.length}
+              {doneCount}/{LESSONS.length}
             </span>
             <span className="inline-flex items-center gap-1 text-xs text-muted">
               <BookOpen className="h-3.5 w-3.5" />约 {LESSONS.reduce((a, l) => a + l.minutes, 0)}{" "}
@@ -156,7 +180,7 @@ function HomePage() {
             to: "/docs" as const,
             icon: Library,
             title: "查 · 文档地图",
-            desc: "d3js.org ↔ 本站课",
+            desc: "官网章节 ↔ 本站课",
           },
           {
             to: "/cheatsheet" as const,
@@ -167,14 +191,14 @@ function HomePage() {
           {
             to: "/studio" as const,
             icon: Server,
-            title: "练 · 图表工坊",
-            desc: "柱状图闯关任务",
+            title: "练 · 全栈工坊",
+            desc: "图表挑战闯关",
           },
           {
             to: "/playground" as const,
             icon: Code2,
             title: "练 · Playground",
-            desc: "在线写真实 D3",
+            desc: "真实 Vue 单文件",
           },
           {
             to: "/lab" as const,
@@ -212,8 +236,8 @@ function HomePage() {
       <section className="mt-8">
         <div className="flex items-end justify-between gap-2">
           <div>
-            <h2 className="font-display text-lg font-semibold text-fg">五条学习路径</h2>
-            <p className="mt-1 text-sm text-muted">建议按序号学；工坊与 Playground 可随时穿插</p>
+            <h2 className="font-display text-lg font-semibold text-fg">七条学习路径</h2>
+            <p className="mt-1 text-sm text-muted">建议按 ①→⑥ 主路径学完，⑦ 官网补全为可选加深</p>
           </div>
         </div>
         <ol className="mt-4 grid gap-2 sm:grid-cols-2">

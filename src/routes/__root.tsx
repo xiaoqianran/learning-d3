@@ -1,5 +1,12 @@
 import type { ReactNode } from "react";
-import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
+import {
+  Outlet,
+  createRootRoute,
+  HeadContent,
+  Scripts,
+  Link,
+  useRouterState,
+} from "@tanstack/react-router";
 import {
   BookOpen,
   Check,
@@ -18,7 +25,15 @@ import { LESSONS, getLessonsByTrack } from "@/data/lessons";
 import appCss from "@/styles.css?url";
 import { CatppuccinSwitcher } from "@/components/CatppuccinSwitcher";
 import { applyCtpAccent, applyCtpFlavor, readCtpAccent, readCtpFlavor } from "@/lib/catppuccin";
-import { getContinueLesson, NAV_PRIMARY, NAV_TOOLS, orderedTracks, trackLabel } from "@/lib/nav";
+import {
+  getContinueHref,
+  getContinueLesson,
+  isAllComplete,
+  NAV_PRIMARY,
+  NAV_TOOLS,
+  orderedTracks,
+  trackLabel,
+} from "@/lib/nav";
 
 export const Route = createRootRoute({
   head: () => ({
@@ -26,12 +41,12 @@ export const Route = createRootRoute({
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       {
-        title: "D3.js 实战学习 · 系统路径",
+        title: "D3 实战学习 v2 · 系统路径",
       },
       {
         name: "description",
         content:
-          "D3.js 中文交互教程：清晰学习路径、文档地图、讲解+源码+Live Demo、Playground 与图表工坊。",
+          "D3.js 中文交互教程：对齐 d3js.org：路径、文档地图、Live Demo、Catppuccin 与图表工坊。",
       },
     ],
     links: [
@@ -56,11 +71,11 @@ function RootComponent() {
 }
 
 const CTP_BOOT =
-  "(function(){try{var f=localStorage.getItem('d3-learn-ctp-flavor');var a=localStorage.getItem('d3-learn-ctp-accent');var okF=['mocha','macchiato','frappe','latte'];var okA=['green','mauve','blue','lavender','sapphire','teal','peach','pink'];if(okF.indexOf(f)<0)f='mocha';if(okA.indexOf(a)<0)a='blue';document.documentElement.setAttribute('data-ctp-flavor',f);document.documentElement.setAttribute('data-ctp-accent',a);}catch(e){document.documentElement.setAttribute('data-ctp-flavor','mocha');document.documentElement.setAttribute('data-ctp-accent','blue');}})();";
+  "(function(){try{var f=localStorage.getItem('d3-learn-ctp-flavor');var a=localStorage.getItem('d3-learn-ctp-accent');var okF=['mocha','macchiato','frappe','latte'];var okA=['green','mauve','blue','lavender','sapphire','teal','peach','pink'];if(okF.indexOf(f)<0)f='mocha';if(okA.indexOf(a)<0)a='teal';document.documentElement.setAttribute('data-ctp-flavor',f);document.documentElement.setAttribute('data-ctp-accent',a);}catch(e){document.documentElement.setAttribute('data-ctp-flavor','mocha');document.documentElement.setAttribute('data-ctp-accent','teal');}})();";
 
 function RootDocument({ children }: { children: ReactNode }) {
   return (
-    <html lang="zh-CN" data-ctp-flavor="mocha" data-ctp-accent="blue">
+    <html lang="zh-CN" data-ctp-flavor="mocha" data-ctp-accent="teal">
       <head>
         <script dangerouslySetInnerHTML={{ __html: CTP_BOOT }} />
         <HeadContent />
@@ -79,26 +94,49 @@ function AppShell({ children }: { children: ReactNode }) {
   const [sidebarQ, setSidebarQ] = useState("");
   const completed = useProgress((s) => s.completed);
   const streak = useProgress((s) => s.streak);
-  const checkInToday = useProgress((s) => s.checkInToday);
-  const progress = Math.round((completed.length / LESSONS.length) * 100);
+  const progress = (() => {
+    const n = LESSONS.filter((l) => completed.includes(l.slug)).length;
+    return LESSONS.length ? Math.round((n / LESSONS.length) * 100) : 0;
+  })();
   const cont = getContinueLesson(completed);
+  const continueTo = getContinueHref(completed);
+  const allDone = isAllComplete(completed);
   const moreRef = useRef<HTMLDivElement>(null);
+  const activeLessonSlug = useRouterState({
+    select: (s) => {
+      const m = s.location.pathname.match(/\/lesson\/([^/]+)/);
+      return m?.[1] ? decodeURIComponent(m[1]) : null;
+    },
+  });
 
   const contTrack = cont.track;
   const [expanded, setExpanded] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
-    for (const t of orderedTracks()) init[t] = t === contTrack || t === "基础";
+    for (const tr of orderedTracks()) init[tr] = tr === contTrack || tr === "基础";
     return init;
   });
 
   useEffect(() => {
-    checkInToday();
-  }, [checkInToday]);
+    if (!activeLessonSlug) return;
+    const lesson = LESSONS.find((l) => l.slug === activeLessonSlug);
+    if (!lesson) return;
+    setExpanded((prev) => ({ ...prev, [lesson.track]: true }));
+  }, [activeLessonSlug]);
+
+  useEffect(() => {
+    if (!activeLessonSlug) return;
+    const id = window.setTimeout(() => {
+      const sel = `[data-lesson-slug="${activeLessonSlug.replace(/"/g, "")}"]`;
+      document.querySelector(sel)?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, [activeLessonSlug, expanded, open]);
 
   useEffect(() => {
     applyCtpFlavor(readCtpFlavor());
     applyCtpAccent(readCtpAccent());
   }, []);
+
 
   useEffect(() => {
     if (!moreOpen) return;
@@ -169,7 +207,7 @@ function AppShell({ children }: { children: ReactNode }) {
               D3 实战学习
             </span>
             <span className="hidden rounded-full bg-surface-3 px-1.5 py-0.5 font-mono text-[10px] text-primary sm:inline">
-              v1
+              v2
             </span>
           </Link>
 
@@ -239,14 +277,23 @@ function AppShell({ children }: { children: ReactNode }) {
           </nav>
 
           <div className="ml-auto flex items-center gap-1.5 sm:gap-2">
-            <Link
-              to="/lesson/$slug"
-              params={{ slug: cont.slug }}
-              className="hidden items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-medium text-primary-fg no-underline hover:opacity-90 sm:inline-flex"
-            >
-              <Play className="h-3 w-3" />
-              {completed.length > 0 ? "继续" : "开始"}
-            </Link>
+            {continueTo.kind === "certificate" ? (
+              <Link
+                to="/certificate"
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-fg no-underline hover:opacity-90 sm:gap-1.5 sm:px-3"
+              >
+                结业
+              </Link>
+            ) : (
+              <Link
+                to="/lesson/$slug"
+                params={{ slug: continueTo.slug! }}
+                className="inline-flex items-center gap-1 rounded-full bg-primary px-2.5 py-1.5 text-xs font-medium text-primary-fg no-underline hover:opacity-90 sm:gap-1.5 sm:px-3"
+              >
+                <Play className="h-3 w-3" />
+                {LESSONS.some((l) => completed.includes(l.slug)) ? "继续" : "开始"}
+              </Link>
+            )}
             <div className="hidden sm:block">
               <CatppuccinSwitcher mode="popover" />
             </div>
@@ -281,25 +328,48 @@ function AppShell({ children }: { children: ReactNode }) {
         >
           <nav className="scrollbar-thin flex h-[calc(100dvh-3.5rem)] flex-col overflow-y-auto p-3 lg:sticky lg:top-14 lg:h-[calc(100dvh-3.5rem)] lg:py-5">
             {/* 继续学习 */}
-            <Link
-              to="/lesson/$slug"
-              params={{ slug: cont.slug }}
-              onClick={closeNav}
-              className="mb-3 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary-soft px-3 py-2.5 no-underline transition-opacity hover:opacity-90"
-            >
-              <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg">
-                <Play className="h-4 w-4" />
-              </span>
-              <span className="min-w-0">
-                <span className="block text-[10px] font-medium uppercase tracking-wider text-primary">
-                  {completed.length > 0 ? "继续学习" : "开始学习"}
+            {continueTo.kind === "certificate" ? (
+              <Link
+                to="/certificate"
+                onClick={closeNav}
+                className="mb-3 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary-soft px-3 py-2.5 no-underline transition-opacity hover:opacity-90"
+              >
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg">
+                  <Play className="h-4 w-4" />
                 </span>
-                <span className="mt-0.5 block truncate text-sm font-semibold text-fg">
-                  {cont.title}
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-medium uppercase tracking-wider text-primary">
+                    路径已完成
+                  </span>
+                  <span className="mt-0.5 block truncate text-sm font-semibold text-fg">
+                    领取结业证明
+                  </span>
+                  <span className="block text-[11px] text-muted">
+                    全部 {LESSONS.length} 课已完成
+                  </span>
                 </span>
-                <span className="block text-[11px] text-muted">{trackLabel(cont.track)}</span>
-              </span>
-            </Link>
+              </Link>
+            ) : (
+              <Link
+                to="/lesson/$slug"
+                params={{ slug: continueTo.slug! }}
+                onClick={closeNav}
+                className="mb-3 flex items-start gap-2.5 rounded-xl border border-primary/30 bg-primary-soft px-3 py-2.5 no-underline transition-opacity hover:opacity-90"
+              >
+                <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-fg">
+                  <Play className="h-4 w-4" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[10px] font-medium uppercase tracking-wider text-primary">
+                    {LESSONS.some((l) => completed.includes(l.slug)) ? "继续学习" : "开始学习"}
+                  </span>
+                  <span className="mt-0.5 block truncate text-sm font-semibold text-fg">
+                    {cont.title}
+                  </span>
+                  <span className="block text-[11px] text-muted">{trackLabel(cont.track)}</span>
+                </span>
+              </Link>
+            )}
 
             {/* 搜索 */}
             <div className="relative mb-3">
@@ -403,7 +473,12 @@ function AppShell({ children }: { children: ReactNode }) {
                                 to="/lesson/$slug"
                                 params={{ slug: lesson.slug }}
                                 onClick={closeNav}
-                                className="flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-fg no-underline transition-colors hover:bg-surface-2 [&.active]:bg-primary-soft [&.active]:text-primary"
+                                data-lesson-slug={lesson.slug}
+                                className={cn(
+                                  "flex items-start gap-2 rounded-md px-2 py-1.5 text-sm text-fg no-underline transition-colors hover:bg-surface-2 [&.active]:bg-primary-soft [&.active]:text-primary",
+                                  activeLessonSlug === lesson.slug &&
+                                    "bg-primary-soft text-primary",
+                                )}
                                 activeProps={{ className: "active" }}
                               >
                                 <span
@@ -443,7 +518,7 @@ function AppShell({ children }: { children: ReactNode }) {
                 <CatppuccinSwitcher mode="popover" className="w-full" />
               </div>
               <p className="mt-2 px-1 text-[10px] leading-relaxed text-subtle">
-                学 → 路径 · 查 → 文档 · 练 → 工坊 · 我 → 进度
+                学路径 · 查文档 · 练工坊 · 看进度
               </p>
             </div>
           </nav>
