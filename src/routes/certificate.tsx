@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { LESSONS, TRACKS, getLessonsByTrack } from "@/data/lessons";
+import { LESSONS, getLessonsByTrack } from "@/data/lessons";
+import { orderedTracks, trackLabel } from "@/lib/nav";
 import { useProgress } from "@/store/progress";
 import { Button } from "@/components/ui/button";
 import { Award, Lock } from "lucide-react";
@@ -36,14 +37,14 @@ function CertificatePage() {
           学习证明
         </h1>
         <p className="mt-1 text-sm text-muted">
-          完成全部 {LESSONS.length} 节课程后解锁（含图表/布局/工程化）
+          完成全部 {LESSONS.length} 节课程后解锁（含五条学习路径）
         </p>
       </header>
 
       <section className="mb-4 rounded-xl border border-border bg-surface p-4">
         <h2 className="text-sm font-medium text-fg">各路径进度</h2>
         <ul className="mt-3 space-y-2">
-          {TRACKS.map((t) => {
+          {orderedTracks().map((t) => {
             const list = getLessonsByTrack(t);
             const done = list.filter((l) => completed.includes(l.slug)).length;
             const pct = list.length
@@ -52,7 +53,7 @@ function CertificatePage() {
             return (
               <li key={t}>
                 <div className="flex justify-between text-xs">
-                  <span className="text-muted">{t}</span>
+                  <span className="text-muted">{trackLabel(t)}</span>
                   <span className="font-mono text-subtle">
                     {done}/{list.length}
                   </span>

@@ -1,5 +1,6 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { getAdjacent, getLesson, getLessonIndex, LESSONS } from "@/data/lessons";
+import { trackLabel } from "@/lib/nav";
 import { CodeBlock } from "@/components/CodeBlock";
 import { InteractiveDemo } from "@/components/demos/InteractiveDemos";
 import { Quiz } from "@/components/Quiz";
@@ -58,7 +59,7 @@ function LessonPage() {
           第 {idx + 1}/{LESSONS.length} 节
         </span>
         <span className="rounded-full bg-surface-3 px-2 py-0.5 text-[10px]">
-          {lesson.track}路径
+          {trackLabel(lesson.track)}
         </span>
       </div>
 
