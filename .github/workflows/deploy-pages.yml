@@ -1,0 +1,73 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+
+      - name: Install
+        run: npm install --no-fund --no-audit
+
+      - name: Build static site
+        run: npm run build:pages
+        env:
+          GITHUB_PAGES: "true"
+
+      - name: Prepare Pages artifact
+        run: |
+          set -euo pipefail
+          if [ ! -d dist/client ]; then
+            echo "Expected dist/client from SPA build"
+            find dist -maxdepth 3 2>/dev/null || true
+            exit 1
+          fi
+          mkdir -p _site
+          cp -a dist/client/. _site/
+          # GitHub Pages: don't process with Jekyll (keeps _shell.html etc.)
+          touch _site/.nojekyll
+          # SPA / unknown path fallback
+          if [ -f _site/index.html ]; then
+            cp _site/index.html _site/404.html
+          elif [ -f _site/_shell.html ]; then
+            cp _site/_shell.html _site/404.html
+          fi
+          echo "Artifact contents:"
+          ls -la _site | head -30
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
